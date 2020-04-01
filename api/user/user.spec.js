@@ -1,17 +1,26 @@
 const app = require("../../index");
 const request = require("supertest");
 const should = require("should");
+const models = require("../../models");
 
 describe("POST /sign_in", () => {
+  const users = [
+    { email: "oyg0420@gmail.com", password: "OOOooo123!@#" },
+    { email: "oyg@gmail.com", password: "123123123123" },
+    { email: "0420@gmail.com", password: "OOOooo123!@#" }
+  ];
+  before(() => models.sequelize.sync({ force: true }));
+  before(() => models.User.bulkCreate(users));
   describe("성공시", () => {
-    it("success: true, user: { email, password }, message: 'Success SignIn'", done => {
+    it("success: true, user: { id, email }, token, message: 'Success login'", done => {
       request(app)
         .post("/sign_in")
         .send({ email: "oyg0420@gmail.com", password: "OOOooo123!@#" })
         .end((err, res) => {
           res.body.success.should.be.true();
+          res.body.should.have.property("token");
           res.body.should.have.property("user").which.is.an.Object();
-          res.body.message.should.be.equal("Success SignIn");
+          res.body.message.should.be.equal("Success login");
           done();
         });
     });
@@ -49,7 +58,7 @@ describe("POST /sign_in", () => {
         request(app)
           .post("/sign_in")
           .send({
-            email: "oyg123@gmail.com",
+            email: "oyg1223@gmail.com",
             password: "OOOooo123!@#"
           })
           .expect(410)
@@ -59,4 +68,16 @@ describe("POST /sign_in", () => {
   });
 });
 
-describe("GET /sign_out", () => {});
+describe("GET /sign_out", () => {
+  describe("성공시", () => {
+    it(`success: true, message: 'Success logout'`, done => {
+      request(app)
+        .get("/sign_out")
+        .end((err, res) => {
+          res.body.success.should.be.true();
+          res.body.message.should.be.equal("Success logout");
+          done();
+        });
+    });
+  });
+});

@@ -1,14 +1,37 @@
-const users = [
-  { email: "oyg0420@gmail.com", password: "OOOooo123!@#" },
-  { email: "oyg0421@gmail.com", password: "123123123" },
-  { email: "oyg0000@gmail.com", password: "123123123" }
-];
+const models = require("../../models");
+const jwt = require("jsonwebtoken");
 
 const EMAIL_REGEX = /^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$/g;
 const PASSWORD_REGEX = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/g;
 
 const signIn = (req, res) => {
   const { email, password } = req.body;
+  const secrete = req.app.get("jwt-secrete");
+
+  const check = user => {
+    if (!user) {
+      throw new Error("not found user");
+    }
+
+    const jsonWebTokenSign = new Promise((resolve, reject) => {
+      jwt.sign(
+        { id: user.id, email: user.email },
+        secrete,
+        {
+          expiresIn: "7d",
+          issuer: "pandaman",
+          subject: "userInfo"
+        },
+        (error, token) => {
+          if (error) {
+            reject(error);
+          }
+          resolve({ token, user });
+        }
+      );
+    });
+    return jsonWebTokenSign;
+  };
 
   if (!email.match(EMAIL_REGEX)) {
     return res.status(400).json({
@@ -24,25 +47,30 @@ const signIn = (req, res) => {
     });
   }
 
-  const registerdUser = users.filter(user => {
-    return user.email === email && user.password === password;
-  });
-
-  if (registerdUser.length > 0) {
-    return res.json({
-      success: true,
-      message: "Success SignIn",
-      user: registerdUser
+  models.User.findOne({ where: { email, password } })
+    .then(check)
+    .then(data => {
+      return res.json({
+        success: true,
+        message: "Success login",
+        user: { id: data.user.id, email: data.user.email },
+        token: data.token
+      });
+    })
+    .catch(err => {
+      return res.status(410).json({
+        success: false,
+        message: err.meesage
+      });
     });
-  }
-
-  return res.status(410).json({
-    success: false,
-    message: "User not found"
-  });
 };
 
-const signOut = (req, res) => {};
+const signOut = (req, res) => {
+  return res.json({
+    success: true,
+    message: "Success logout"
+  });
+};
 
 const signUp = (req, res) => {};
 
